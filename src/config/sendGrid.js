@@ -16,8 +16,10 @@ export async function sendVerifyEmail(email, hashedUserId) {
             }
         }
         await sendGridMail.send(msg);
+        return true;
     }catch(err){
         console.log(err);
+        return false;
     }
 }
 
@@ -33,7 +35,9 @@ export async function sendPassword(email, randomPassword) {
             }
         }
         await sendGridMail.send(msg);
+        return true;
     }catch(err){
         console.log(err);
+        return false;
     }
 }
