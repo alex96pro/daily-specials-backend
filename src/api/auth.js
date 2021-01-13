@@ -92,10 +92,6 @@ export async function forgottenPassword(req,res) {
 
 export async function profile(req,res) {
     try{
-        if(!req.headers.authorization){
-            return res.status(401).json("UNAUTHORIZED");
-        }
-
         let decodedEmail = decodeToken(req.headers.authorization);
         
         if(decodedEmail === null){

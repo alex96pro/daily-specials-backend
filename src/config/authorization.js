@@ -4,6 +4,9 @@ dotenv.config();
 
 export default function decodeToken(headerToken){
     //AUTHORIZATION
+        if(!headerToken){
+            return null;
+        }
         const usertoken = headerToken;
         const token = usertoken.split(' ');
         let decoded = null;
