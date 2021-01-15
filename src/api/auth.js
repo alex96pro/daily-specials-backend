@@ -1,9 +1,8 @@
 import bcrypt from 'bcrypt';
 import pool from '../config/dbConfig.js';
 import jwt, { decode } from 'jsonwebtoken';
-import randomPassword from '../common/randomPassword.js';
 import decodeToken from '../config/authorization.js';
-import { sendVerifyEmail, sendPassword } from '../config/sendGrid.js';
+import { sendVerifyEmail, sendForgottenPassword } from '../config/sendGrid.js';
 
 export async function login(req,res) {
     try{
@@ -41,7 +40,7 @@ export async function signUp(req,res) {
             let userIdString = result3.rows[0].max.toString();
             let hashedUserId = await bcrypt.hash(userIdString,10);
             hashedUserId = hashedUserId.replace(/\//g,Math.round(Math.random()*10).toString()); //remove / from hashed value so frontend can get id from url (/ makes problems)
-            await pool.query("INSERT INTO verification VALUES ($1,$2)",[result3.rows[0].max, hashedUserId]);
+            await pool.query("INSERT INTO verification VALUES ($1,$2,$3)",[result3.rows[0].max, hashedUserId, 'account-verification']);
             if(sendVerifyEmail(req.body.email, hashedUserId)){
                 res.status(201).json([result2]);
             }else{
@@ -55,12 +54,12 @@ export async function signUp(req,res) {
 
 export async function verifyAccount(req,res) {
     try{
-        let result = await pool.query('UPDATE users SET "verified" = true WHERE "userId" = (SELECT "userId" FROM verification WHERE "hashedId" = $1)',
-        [req.body.hashedUserId]);
+        let result = await pool.query('UPDATE users SET "verified" = true WHERE "userId" = (SELECT "userId" FROM verification WHERE "hashedId" = $1 AND "type" = $2)',
+        [req.body.hashedUserId, 'account-verification']);
         if(result.rowCount === 1){
             res.status(200).json("VERIFIED");
         }
-        await pool.query('DELETE FROM verification WHERE "hashedId" = $1', [req.body.hashedUserId]);
+        await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2', [req.body.hashedUserId, 'account-verification']);
     }catch(err){
         res.status(500).json(err);
     }
@@ -68,12 +67,13 @@ export async function verifyAccount(req,res) {
 
 export async function forgottenPassword(req,res) {
     try{
-        let result = await pool.query('SELECT "email" from users WHERE "email" = $1',[req.body.email]);
+        let result = await pool.query('SELECT "email", "userId" from users WHERE "email" = $1',[req.body.email]);
         if(result.rows && result.rows.length > 0){
-            let randomPass = randomPassword();
-            let hashedRandomPassword = await bcrypt.hash(randomPass,10);
-            if(sendPassword(result.rows[0].email, randomPass)){
-                let result2 = await pool.query('UPDATE users SET "password" = $1 WHERE "email" = $2',[hashedRandomPassword, result.rows[0].email]);
+            let userIdString = result.rows[0].userId.toString();
+            let hashedUserId = await bcrypt.hash(userIdString,10);
+            hashedUserId = hashedUserId.replace(/\//g,Math.round(Math.random()*10).toString()); //remove / from hashed value so frontend can get id from url (/ makes problems)
+            if(sendForgottenPassword(result.rows[0].email, hashedUserId)){
+                let result2 = await pool.query("INSERT INTO verification VALUES ($1,$2,$3)",[result.rows[0].userId, hashedUserId, 'forgotten-password']);
                 if(result2.rowCount === 1){
                     res.status(200).json("SUCCESSFULY SENT PASSWORD");
                 }
@@ -87,6 +87,23 @@ export async function forgottenPassword(req,res) {
     }catch(err){
         console.log(err);
         res.status(500).json(err);
+    }
+}
+
+export async function newPassword(req,res) {
+    try{
+        let hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
+        let result = await pool.query('UPDATE users SET "password" = $1 WHERE "userId" = (SELECT "userId" FROM verification WHERE "hashedId" = $2 AND "type" = $3)',
+        [hashedPassword, req.body.userId, 'forgotten-password']);
+        if(result.rowCount === 1){
+            await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2', [req.body.userId, 'forgotten-password']);
+        }else{
+            return res.status(401).json("UNAUTHORIZED");
+        }
+        res.status(200).json("SUCCESSFULY CREATED NEW PASSWORD");
+    }catch(err){
+        console.log(err);
+        res.status(500).json("SERVER ERROR");
     }
 }
 

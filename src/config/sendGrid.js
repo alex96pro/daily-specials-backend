@@ -23,7 +23,7 @@ export async function sendVerifyEmail(email, hashedUserId) {
     }
 }
 
-export async function sendPassword(email, randomPassword) {
+export async function sendForgottenPassword(email, hashedUserId) {
     try{
         sendGridMail.setApiKey(process.env.SENDGRID_API_KEY);
         const msg = {
@@ -31,7 +31,8 @@ export async function sendPassword(email, randomPassword) {
             from: process.env.SENDER_EMAIL,
             templateId: process.env.FORGOTTEN_PASSWORD_TEMPLATE,
             dynamic_template_data: {
-                randomPassword: randomPassword,
+                FRONTEND_API: FRONTEND_API,
+                userId: hashedUserId
             }
         }
         await sendGridMail.send(msg);
