@@ -30,7 +30,11 @@ export async function feed(req,res) {
             [req.query.lat, req.query.lon, req.query.range, DAILY_SPECIALS_PER_PAGE, (req.query.scrollCount - 1) * DAILY_SPECIALS_PER_PAGE]);
             if(result.rows.length && result.rows.length > 0){
                 for(let i = 0; i < result.rows.length; i++){
-                    result.rows[i].tags = result.rows[i].tags.split(',');
+                    if(result.rows[i].tags){
+                        result.rows[i].tags = result.rows[i].tags.split(',');
+                    }else{
+                        result.rows[i].tags = [];
+                    }
                 }
                 res.json(result.rows);
             }else{

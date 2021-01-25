@@ -6,9 +6,9 @@ import { sendVerifyEmail, sendForgottenPassword } from '../config/sendGrid.js';
 
 export async function login(req,res) {
     try{
-        let result = await pool.query('SELECT "userId", "verified", "password" FROM users WHERE "email" = $1', [req.body.email]);
+        let result = await pool.query('SELECT "userId", "verified", "password", "address", "lat", "lon" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") WHERE "email" = $1', [req.query.email]);
         if(result.rows && result.rows.length > 0){
-            if(!(await bcrypt.compare(req.body.password, result.rows[0].password))){
+            if(!(await bcrypt.compare(req.query.password, result.rows[0].password))){
                 return res.status(401).json("WRONG PASSWORD");
             }
             else if(result.rows[0].verified === false){
@@ -16,8 +16,13 @@ export async function login(req,res) {
             }
             else{
                 //SUCCESSFUL LOGIN , CREATING ACCESS TOKEN 
-                const accessToken = jwt.sign({email:req.body.email, password:req.body.password}, process.env.ACCESS_TOKEN_SECRET);
-                return res.json({accessToken: accessToken, userId: result.rows[0].userId});
+                const accessToken = jwt.sign({email:req.query.email, password:req.query.password}, process.env.ACCESS_TOKEN_SECRET);
+                //CREATING ADDRESSES ARRAY
+                let addresses = [];
+                for(let i = 0; i < result.rows.length; i++){
+                    addresses.push({address:result.rows[i].address, lat:result.rows[i].lat, lon:result.rows[i].lon});
+                }
+                return res.json({accessToken: accessToken, userId: result.rows[0].userId, addresses: addresses});
             }
         }else{
             return res.status(401).json("WRONG EMAIL");
@@ -35,12 +40,16 @@ export async function signUp(req,res) {
         }else{
             //const salt = await bcrypt.genSalt(); // default = 10, salt is used for different hashes for same passwords
             const hashedPassword = await bcrypt.hash(req.body.password, 10); // , salt
-            let result2 = await pool.query('INSERT INTO users VALUES (default,$1,$2,$3)',[req.body.email, hashedPassword, false]);
-            let result3 = await pool.query('SELECT MAX("userId") AS max FROM users');
-            let userIdString = result3.rows[0].max.toString();
+
+            let result2 = await pool.query('INSERT INTO users VALUES (default,$1,$2,$3) RETURNING "userId"',[req.body.email, hashedPassword, false]);
+            let result3 = await pool.query('INSERT INTO addresses VALUES (default,$1,$2,$3) RETURNING "addressId"',[req.body.address, req.body.lat, req.body.lon]);
+            
+            await pool.query('INSERT INTO user_address VALUES (default,$1,$2)',[result2.rows[0].userId, result3.rows[0].addressId]);
+
+            let userIdString = result2.rows[0].userId.toString();
             let hashedUserId = await bcrypt.hash(userIdString,10);
             hashedUserId = hashedUserId.replace(/\//g,Math.round(Math.random()*10).toString()); //remove / from hashed value so frontend can get id from url (/ makes problems)
-            await pool.query("INSERT INTO verification VALUES ($1,$2,$3)",[result3.rows[0].max, hashedUserId, 'account-verification']);
+            await pool.query("INSERT INTO verification VALUES ($1,$2,$3,$4)",[result2.rows[0].userId, hashedUserId, 'account-verification', 'user']);
             if(sendVerifyEmail(req.body.email, hashedUserId)){
                 res.status(201).json([result2]);
             }else{
@@ -48,18 +57,19 @@ export async function signUp(req,res) {
             }
         }
     }catch(err){
+        console.log(err);
         res.status(500).json(err);
     }
 }
 
 export async function verifyAccount(req,res) {
     try{
-        let result = await pool.query('UPDATE users SET "verified" = true WHERE "userId" = (SELECT "userId" FROM verification WHERE "hashedId" = $1 AND "type" = $2)',
-        [req.body.hashedUserId, 'account-verification']);
+        let result = await pool.query('UPDATE users SET "verified" = true WHERE "userId" = (SELECT "userId" FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3)',
+        [req.body.hashedUserId, 'account-verification', 'user']);
         if(result.rowCount === 1){
             res.status(200).json("VERIFIED");
         }
-        await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2', [req.body.hashedUserId, 'account-verification']);
+        await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3', [req.body.hashedUserId, 'account-verification', 'user']);
     }catch(err){
         res.status(500).json(err);
     }
@@ -67,13 +77,16 @@ export async function verifyAccount(req,res) {
 
 export async function forgottenPassword(req,res) {
     try{
-        let result = await pool.query('SELECT "email", "userId" from users WHERE "email" = $1',[req.body.email]);
+        let result = await pool.query('SELECT "email", "userId", "type" from users LEFT OUTER JOIN verification USING("userId") WHERE "email" = $1',[req.body.email]);
         if(result.rows && result.rows.length > 0){
+            if(result.rows[0].type !== null && result.rows[0].type === 'forgotten-password'){
+                return res.status(400).json("ALREADY SENT PASSWORD");
+            }
             let userIdString = result.rows[0].userId.toString();
             let hashedUserId = await bcrypt.hash(userIdString,10);
             hashedUserId = hashedUserId.replace(/\//g,Math.round(Math.random()*10).toString()); //remove / from hashed value so frontend can get id from url (/ makes problems)
             if(sendForgottenPassword(result.rows[0].email, hashedUserId)){
-                let result2 = await pool.query("INSERT INTO verification VALUES ($1,$2,$3)",[result.rows[0].userId, hashedUserId, 'forgotten-password']);
+                let result2 = await pool.query("INSERT INTO verification VALUES ($1,$2,$3,$4)",[result.rows[0].userId, hashedUserId, 'forgotten-password', 'user']);
                 if(result2.rowCount === 1){
                     res.status(200).json("SUCCESSFULY SENT PASSWORD");
                 }
@@ -93,10 +106,10 @@ export async function forgottenPassword(req,res) {
 export async function newPassword(req,res) {
     try{
         let hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
-        let result = await pool.query('UPDATE users SET "password" = $1 WHERE "userId" = (SELECT "userId" FROM verification WHERE "hashedId" = $2 AND "type" = $3)',
-        [hashedPassword, req.body.userId, 'forgotten-password']);
+        let result = await pool.query('UPDATE users SET "password" = $1 WHERE "userId" = (SELECT "userId" FROM verification WHERE "hashedId" = $2 AND "type" = $3 AND "role" = $4)',
+        [hashedPassword, req.body.userId, 'forgotten-password', 'user']);
         if(result.rowCount === 1){
-            await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2', [req.body.userId, 'forgotten-password']);
+            await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3', [req.body.userId, 'forgotten-password', 'user']);
         }else{
             return res.status(401).json("UNAUTHORIZED");
         }
@@ -114,9 +127,14 @@ export async function profile(req,res) {
         if(decodedEmail === null){
             return res.status(401).json("UNAUTHORIZED");
         }else{
-            let result = await pool.query('SELECT "email" from users WHERE "email" = $1',[decodedEmail]);
+            let result = await pool.query('SELECT "email", "address" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") '+
+            'WHERE "email" = $1',[decodedEmail]);
             if(result.rows && result.rows.length > 0){
-                return res.json({email: result.rows[0].email});
+                let addresses = [];
+                for(let i = 0; i < result.rows.length; i++){
+                    addresses.push(result.rows[i].address);
+                }
+                return res.json({email: result.rows[0].email, addresses: addresses});
             }
         }
     }catch(err){

@@ -9,7 +9,7 @@ import { newPassword } from '../api/auth.js';
 
 const router = express.Router();
 
-router.post('/login', login);
+router.get('/login', login);
 router.post('/sign-up', signUp);
 router.post('/verify-account', verifyAccount);
 router.post('/forgotten-password', forgottenPassword);
