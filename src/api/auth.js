@@ -22,7 +22,7 @@ export async function login(req,res) {
                 for(let i = 0; i < result.rows.length; i++){
                     addresses.push({address:result.rows[i].address, lat:result.rows[i].lat, lon:result.rows[i].lon});
                 }
-                return res.json({accessToken: accessToken, userId: result.rows[0].userId, addresses: addresses});
+                return res.json({accessToken: accessToken, userId: result.rows[0].userId, email: req.query.email, addresses: addresses});
             }
         }else{
             return res.status(401).json("WRONG EMAIL");
@@ -120,29 +120,6 @@ export async function newPassword(req,res) {
     }
 }
 
-export async function profile(req,res) {
-    try{
-        let decodedEmail = decodeToken(req.headers.authorization);
-        
-        if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
-        }else{
-            let result = await pool.query('SELECT "email", "address" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") '+
-            'WHERE "email" = $1',[decodedEmail]);
-            if(result.rows && result.rows.length > 0){
-                let addresses = [];
-                for(let i = 0; i < result.rows.length; i++){
-                    addresses.push(result.rows[i].address);
-                }
-                return res.json({email: result.rows[0].email, addresses: addresses});
-            }
-        }
-    }catch(err){
-        console.log(err);
-        res.status(500);
-    }
-}
-
 export async function changePassword(req,res) {
     try{
         if(!req.headers.authorization){
@@ -160,6 +137,33 @@ export async function changePassword(req,res) {
             pool.query('UPDATE users SET "password" = $1 WHERE "email" = $2',[hashedPassword, decodedEmail]);
             res.json("CHANGED PASSWORD SUCCESSFULLY");
         }
+    }catch(err){
+        console.log(err);
+        res.status(500);
+    }
+};
+
+export async function addNewAddress(req,res) {
+    try{
+        let result = await pool.query('INSERT INTO addresses VALUES (default,$1,$2,$3) RETURNING "addressId"',[req.body.address, req.body.lat, req.body.lon]);
+        await pool.query('INSERT INTO user_address VALUES (default,$1,$2)',[req.body.userId, result.rows[0].addressId]);
+        let result2 = await pool.query('SELECT "address","lat","lon" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") WHERE "userId" = $1',[req.body.userId]);
+        res.json(result2.rows);
+    }catch(err){
+        console.log(err);
+        res.status(500);
+    }
+}
+
+export async function removeAddress(req,res) {
+    try{
+        let result = await pool.query(
+        'DELETE FROM addresses WHERE "address" = $1 AND '+
+        '"addressId" IN (SELECT "addressId" FROM users JOIN user_address USING("userId") WHERE "userId" = $2) RETURNING "addressId"',
+        [req.params.address, req.params.id]);
+        await pool.query('DELETE FROM "user_address" WHERE "addressId" = $1',[result.rows[0].addressId]);
+        let result2 = await pool.query('SELECT "address","lat","lon" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") WHERE "userId" = $1',[req.params.id]);
+        res.json(result2.rows);
     }catch(err){
         console.log(err);
         res.status(500);
