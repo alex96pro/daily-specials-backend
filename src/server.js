@@ -4,6 +4,7 @@ import cors from 'cors';
 import authRouter from './routes/auth.js';
 import userRouter from './routes/user.js';
 import authRestaurantRouter from './routes/auth-restaurant.js';
+import restaurantRouter from './routes/restaurant.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use('/auth', authRouter);
 app.use('/user', userRouter);
 app.use('/auth-restaurant', authRestaurantRouter);
+app.use('/restaurant', restaurantRouter);
 
 app.get('/', (req,res) => {
     res.json("Daily specials server is up!");

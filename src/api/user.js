@@ -1,5 +1,4 @@
 import pool from '../config/dbConfig.js';
-import jwt, { decode } from 'jsonwebtoken';
 import decodeToken from '../config/authorization.js';
 import { DAILY_SPECIALS_PER_PAGE } from '../consts.js';
 
