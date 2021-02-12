@@ -3,8 +3,9 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import authRouter from './routes/auth.js';
 import userRouter from './routes/user.js';
-import authRestaurantRouter from './routes/auth-restaurant.js';
-import restaurantRouter from './routes/restaurant.js';
+import restaurantAuthRouter from './routes/restaurant-auth.js';
+import restaurantMenuRouter from './routes/restaurant-menu.js';
+import restaurantSpecialsRouter from './routes/restaurant-specials.js';
 
 dotenv.config();
 
@@ -18,8 +19,9 @@ app.use(express.urlencoded({ limit: '5mb', extended: true }));
 //ROUTES
 app.use('/auth', authRouter);
 app.use('/user', userRouter);
-app.use('/auth-restaurant', authRestaurantRouter);
-app.use('/restaurant', restaurantRouter);
+app.use('/restaurant-auth', restaurantAuthRouter);
+app.use('/restaurant-menu', restaurantMenuRouter);
+app.use('/restaurant-specials', restaurantSpecialsRouter);
 
 app.get('/', (req,res) => {
     res.json("Daily specials server is up!");

@@ -1,12 +1,12 @@
 import bcrypt from 'bcrypt';
 import pool from '../config/dbConfig.js';
-import jwt, { decode } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import decodeToken from '../config/authorization.js';
 import { sendVerifyEmail, sendForgottenPassword } from '../config/sendGrid.js';
 
 export async function login(req,res) {
     try{
-        let result = await pool.query('SELECT "userId", "verified", "password", "address", "lat", "lon" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") WHERE "email" = $1', [req.query.email]);
+        let result = await pool.query('SELECT "userId", "verified", "password", "addressId", "address", "lat", "lon" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") WHERE "email" = $1', [req.query.email]);
         if(result.rows && result.rows.length > 0){
             if(!(await bcrypt.compare(req.query.password, result.rows[0].password))){
                 return res.status(401).json("WRONG PASSWORD");
@@ -20,7 +20,7 @@ export async function login(req,res) {
                 //CREATING ADDRESSES ARRAY
                 let addresses = [];
                 for(let i = 0; i < result.rows.length; i++){
-                    addresses.push({address:result.rows[i].address, lat:result.rows[i].lat, lon:result.rows[i].lon});
+                    addresses.push({addressId: result.rows[i].addressId, address:result.rows[i].address, lat:result.rows[i].lat, lon:result.rows[i].lon});
                 }
                 return res.json({accessToken: accessToken, userId: result.rows[0].userId, email: req.query.email, addresses: addresses});
             }
@@ -122,9 +122,6 @@ export async function newPassword(req,res) {
 
 export async function changePassword(req,res) {
     try{
-        if(!req.headers.authorization){
-            return res.status(401).json("UNAUTHORIZED");
-        }
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
             return res.status(401).json("UNAUTHORIZED");
@@ -145,10 +142,9 @@ export async function changePassword(req,res) {
 
 export async function addNewAddress(req,res) {
     try{
-        let result = await pool.query('INSERT INTO addresses VALUES (default,$1,$2,$3) RETURNING "addressId"',[req.body.address, req.body.lat, req.body.lon]);
+        let result = await pool.query('INSERT INTO addresses VALUES (default,$1,$2,$3) RETURNING "addressId", "address", "lat", "lon"',[req.body.address, req.body.lat, req.body.lon]);
         await pool.query('INSERT INTO user_address VALUES (default,$1,$2)',[req.body.userId, result.rows[0].addressId]);
-        let result2 = await pool.query('SELECT "address","lat","lon" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") WHERE "userId" = $1',[req.body.userId]);
-        res.json(result2.rows);
+        res.json(result.rows[0]);
     }catch(err){
         console.log(err);
         res.status(500);
@@ -157,13 +153,13 @@ export async function addNewAddress(req,res) {
 
 export async function removeAddress(req,res) {
     try{
-        let result = await pool.query(
-        'DELETE FROM addresses WHERE "address" = $1 AND '+
-        '"addressId" IN (SELECT "addressId" FROM users JOIN user_address USING("userId") WHERE "userId" = $2) RETURNING "addressId"',
-        [req.params.address, req.params.id]);
-        await pool.query('DELETE FROM "user_address" WHERE "addressId" = $1',[result.rows[0].addressId]);
-        let result2 = await pool.query('SELECT "address","lat","lon" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") WHERE "userId" = $1',[req.params.id]);
-        res.json(result2.rows);
+        let decodedEmail = decodeToken(req.headers.authorization);
+        if(decodedEmail === null){
+            return res.status(401).json("UNAUTHORIZED");
+        }
+        let result = await pool.query('DELETE FROM addresses WHERE "addressId" = $1 RETURNING "addressId"',[req.params.id]);
+        await pool.query('DELETE FROM "user_address" WHERE "addressId" = $1',[req.params.id]);
+        res.json(result.rows[0].addressId);
     }catch(err){
         console.log(err);
         res.status(500);

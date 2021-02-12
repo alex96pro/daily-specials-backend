@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
-dotenv.config();
 import sendGridMail from '@sendgrid/mail';
-import { FRONTEND_API } from '../consts.js';
+import { FRONTEND_API } from '../common/consts.js';
+dotenv.config();
 
 export async function sendVerifyEmail(email, hashedUserId) {
     try{
@@ -61,7 +61,7 @@ export async function sendVerifyEmailRestaurant(email, hashedRestaurantId) {
         console.log(err);
         return false;
     }
-}
+};
 
 export async function sendForgottenPasswordRestaurant(email, hashedRestaurantId) {
     try{
@@ -81,4 +81,4 @@ export async function sendForgottenPasswordRestaurant(email, hashedRestaurantId)
         console.log(err);
         return false;
     }
-}
+};

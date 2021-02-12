@@ -17,7 +17,7 @@ router.post('/forgotten-password', forgottenPassword);
 router.post('/change-password', changePassword);
 router.post('/new-password', newPassword);
 router.post('/add-new-address', addNewAddress);
-router.delete('/remove-address/:id/:address', removeAddress);
+router.delete('/remove-address/:id', removeAddress);
 
 export default router;
 
