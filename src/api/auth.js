@@ -6,7 +6,7 @@ import { sendVerifyEmail, sendForgottenPassword } from '../config/sendGrid.js';
 
 export async function login(req,res) {
     try{
-        let result = await pool.query('SELECT "userId", "verified", "password", "addressId", "address", "lat", "lon" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") WHERE "email" = $1', [req.query.email]);
+        let result = await pool.query('SELECT "userId", "email", "phone", "verified", "password", "addressId", "address", "lat", "lon", "description" FROM users JOIN user_address USING("userId") JOIN addresses USING("addressId") WHERE "email" = $1', [req.query.email]);
         if(result.rows && result.rows.length > 0){
             if(!(await bcrypt.compare(req.query.password, result.rows[0].password))){
                 return res.status(401).json("WRONG PASSWORD");
@@ -20,9 +20,9 @@ export async function login(req,res) {
                 //CREATING ADDRESSES ARRAY
                 let addresses = [];
                 for(let i = 0; i < result.rows.length; i++){
-                    addresses.push({addressId: result.rows[i].addressId, address:result.rows[i].address, lat:result.rows[i].lat, lon:result.rows[i].lon});
+                    addresses.push({addressId: result.rows[i].addressId, address:result.rows[i].address, lat:result.rows[i].lat, lon:result.rows[i].lon, description:result.rows[i].description});
                 }
-                return res.json({accessToken: accessToken, userId: result.rows[0].userId, email: req.query.email, addresses: addresses});
+                return res.json({accessToken: accessToken, userId: result.rows[0].userId, email: result.rows[0].email, phone: result.rows[0].phone, addresses: addresses});
             }
         }else{
             return res.status(401).json("WRONG EMAIL");
@@ -41,8 +41,8 @@ export async function signUp(req,res) {
             //const salt = await bcrypt.genSalt(); // default = 10, salt is used for different hashes for same passwords
             const hashedPassword = await bcrypt.hash(req.body.password, 10); // , salt
 
-            let result2 = await pool.query('INSERT INTO users VALUES (default,$1,$2,$3) RETURNING "userId"',[req.body.email, hashedPassword, false]);
-            let result3 = await pool.query('INSERT INTO addresses VALUES (default,$1,$2,$3) RETURNING "addressId"',[req.body.address, req.body.lat, req.body.lon]);
+            let result2 = await pool.query('INSERT INTO users VALUES (default,$1,$2,$3,$4) RETURNING "userId"',[req.body.email, hashedPassword, false, req.body.phone]);
+            let result3 = await pool.query('INSERT INTO addresses VALUES (default,$1,$2,$3,$4) RETURNING "addressId"',[req.body.address, req.body.lat, req.body.lon, req.body.description]);
             
             await pool.query('INSERT INTO user_address VALUES (default,$1,$2)',[result2.rows[0].userId, result3.rows[0].addressId]);
 
@@ -142,7 +142,7 @@ export async function changePassword(req,res) {
 
 export async function addNewAddress(req,res) {
     try{
-        let result = await pool.query('INSERT INTO addresses VALUES (default,$1,$2,$3) RETURNING "addressId", "address", "lat", "lon"',[req.body.address, req.body.lat, req.body.lon]);
+        let result = await pool.query('INSERT INTO addresses VALUES (default,$1,$2,$3,$4) RETURNING "addressId", "address", "lat", "lon", "description"',[req.body.address, req.body.position.lat, req.body.position.lon, req.body.description]);
         await pool.query('INSERT INTO user_address VALUES (default,$1,$2)',[req.body.userId, result.rows[0].addressId]);
         res.json(result.rows[0]);
     }catch(err){
