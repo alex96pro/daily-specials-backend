@@ -62,9 +62,9 @@ export async function signUpFirstStep(req,res) {
             //RESTAURANT FIRST TIME DOING FIRST STEP OF SIGN UP
             const hashedPassword = await bcrypt.hash(req.body.password, 10);
             await pool.query(`INSERT INTO restaurants VALUES `+
-            `(default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+            `(default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
             [req.body.restaurantName, null, null, null, req.body.delivery, deliveryRange, deliveryMinimum,
-            req.body.phone, null, null, null, req.body.email, hashedPassword, false]);
+            req.body.phone, null, null, null, null, req.body.email, hashedPassword, false]);
             res.status(200).json("First step of sign up completed");
         }
     }catch(err){
