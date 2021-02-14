@@ -7,8 +7,8 @@ export async function sendVerifyEmail(email, hashedUserId) {
     try{
         sendGridMail.setApiKey(process.env.SENDGRID_API_KEY);
         const msg = {
-            to: 'directdailyspecials@gmail.com',
-            from: process.env.SENDER_EMAIL,
+            to: email,
+            from: 'directdailyspecials@gmail.com',
             templateId: 'd-e458506a14c549b0a373e62d7e1f1063',
             dynamic_template_data: {
                 userId: hashedUserId,
