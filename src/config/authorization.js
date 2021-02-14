@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export default function decodeToken(headerToken){
-    //AUTHORIZATION
+    //AUTHORIZATION WITH TOKEN
     if(!headerToken){
         return null;
     }
