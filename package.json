@@ -2,9 +2,6 @@
   "name": "daily-specials-backend",
   "version": "1.0.0",
   "description": "",
-  "engines": {
-    "npm": "6.x"
-  },
   "main": "./src/server.js",
   "scripts": {
     "start": "./src/server.js",
@@ -25,5 +22,8 @@
     "jsonwebtoken": "^8.5.1",
     "pg": "^8.5.1"
   },
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": "14.15.2"
+  }
 }
