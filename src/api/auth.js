@@ -41,7 +41,7 @@ export async function signUp(req,res) {
             //const salt = await bcrypt.genSalt(); // default = 10, salt is used for different hashes for same passwords
             const hashedPassword = await bcrypt.hash(req.body.password, 10); // , salt
 
-            let result2 = await pool.query('INSERT INTO users VALUES (default,$1,$2,$3,$4) RETURNING "userId"',[req.body.email, hashedPassword, false, req.body.phone]);
+            let result2 = await pool.query('INSERT INTO users VALUES (default,$1,$2,$3,$4) RETURNING "userId"',[req.body.email, hashedPassword, req.body.phone, false]);
             let result3 = await pool.query('INSERT INTO addresses VALUES (default,$1,$2,$3,$4) RETURNING "addressId"',[req.body.address, req.body.lat, req.body.lon, req.body.description]);
             
             await pool.query('INSERT INTO user_address VALUES (default,$1,$2)',[result2.rows[0].userId, result3.rows[0].addressId]);
@@ -49,7 +49,7 @@ export async function signUp(req,res) {
             let userIdString = result2.rows[0].userId.toString();
             let hashedUserId = await bcrypt.hash(userIdString,10);
             hashedUserId = hashedUserId.replace(/\//g,Math.round(Math.random()*10).toString()); //remove / from hashed value so frontend can get id from url (/ makes problems)
-            await pool.query("INSERT INTO verification VALUES ($1,$2,$3,$4)",[result2.rows[0].userId, hashedUserId, 'account-verification', 'user']);
+            await pool.query("INSERT INTO verification VALUES (default,$1,$2,$3,$4)",[result2.rows[0].userId, hashedUserId, 'account-verification', 'user']);
             if(sendVerifyEmail(req.body.email, hashedUserId)){
                 res.status(201).json([result2]);
             }else{

@@ -62,9 +62,9 @@ export async function signUpFirstStep(req,res) {
             //RESTAURANT FIRST TIME DOING FIRST STEP OF SIGN UP
             const hashedPassword = await bcrypt.hash(req.body.password, 10);
             await pool.query(`INSERT INTO restaurants VALUES `+
-            `(default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,null,null,null)`,
+            `(default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
             [req.body.restaurantName, null, null, null, req.body.delivery, deliveryRange, deliveryMinimum,
-            req.body.phone, req.body.email, false, hashedPassword, null]);
+            req.body.phone, null, null, null, req.body.email, hashedPassword, false]);
             res.status(200).json("First step of sign up completed");
         }
     }catch(err){
@@ -89,7 +89,7 @@ export async function signUpComplete(req,res) {
         let hashedRestaurantId = await bcrypt.hash(restaurantIdString,10);
         hashedRestaurantId = hashedRestaurantId.replace(/\//g,Math.round(Math.random()*10).toString()); //remove / from hashed value so frontend can get id from url (/ makes problems)
         
-        await pool.query("INSERT INTO verification VALUES ($1,$2,$3,$4)",
+        await pool.query("INSERT INTO verification VALUES (default,$1,$2,$3,$4)",
         [result.rows[0].restaurantId, hashedRestaurantId, 'account-verification', 'restaurant']);
         if(sendVerifyEmailRestaurant(req.body.email, hashedRestaurantId)){
             res.status(200).json('SUCCESSFULY SIGNED UP FOR RESTAURANT');
