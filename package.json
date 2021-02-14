@@ -2,6 +2,9 @@
   "name": "daily-specials-backend",
   "version": "1.0.0",
   "description": "",
+  "engines": {
+    "npm": "6.x"
+  },
   "main": "./src/server.js",
   "scripts": {
     "start": "./src/server.js",
