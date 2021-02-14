@@ -28,7 +28,7 @@ export async function login(req,res) {
             return res.status(401).json("WRONG EMAIL");
         }
     }catch(err){
-        res.status(500).json(err);
+        res.json({result:result, err:err});
     }
 }
 
