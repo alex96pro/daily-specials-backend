@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import pool from '../config/dbConfig.js';
 import jwt from 'jsonwebtoken';
 import decodeToken from '../config/authorization.js';
-import { sendVerifyEmail, sendForgottenPassword } from '../config/sendGrid.js';
+import { sendVerifyEmailUsers, sendForgottenPasswordUsers } from '../config/sendGrid.js';
 
 export async function login(req,res) {
     try{
@@ -50,7 +50,7 @@ export async function signUp(req,res) {
             let hashedUserId = await bcrypt.hash(userIdString,10);
             hashedUserId = hashedUserId.replace(/\//g,Math.round(Math.random()*10).toString()); //remove / from hashed value so frontend can get id from url (/ makes problems)
             await pool.query("INSERT INTO verification VALUES (default,$1,$2,$3,$4)",[result2.rows[0].userId, hashedUserId, 'account-verification', 'user']);
-            if(sendVerifyEmail(req.body.email, hashedUserId)){
+            if(sendVerifyEmailUsers(req.body.email, hashedUserId)){
                 res.status(201).json([result2]);
             }else{
                 res.status(500).json("SENDGRID ERROR");
@@ -85,7 +85,7 @@ export async function forgottenPassword(req,res) {
             let userIdString = result.rows[0].userId.toString();
             let hashedUserId = await bcrypt.hash(userIdString,10);
             hashedUserId = hashedUserId.replace(/\//g,Math.round(Math.random()*10).toString()); //remove / from hashed value so frontend can get id from url (/ makes problems)
-            if(sendForgottenPassword(result.rows[0].email, hashedUserId)){
+            if(sendForgottenPasswordUsers(result.rows[0].email, hashedUserId)){
                 let result2 = await pool.query("INSERT INTO verification VALUES ($1,$2,$3,$4)",[result.rows[0].userId, hashedUserId, 'forgotten-password', 'user']);
                 if(result2.rowCount === 1){
                     res.status(200).json("SUCCESSFULY SENT PASSWORD");
