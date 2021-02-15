@@ -126,7 +126,7 @@ export async function forgottenPassword(req,res) {
             let hashedRestaurantId = await bcrypt.hash(restaurantIdString, 10);
             hashedRestaurantId = hashedRestaurantId.replace(/\//g,Math.round(Math.random()*10).toString()); //remove / from hashed value so frontend can get id from url (/ makes problems)
             if(sendForgottenPasswordRestaurant(result.rows[0].email, hashedRestaurantId)){
-                let result2 = await pool.query("INSERT INTO verification VALUES ($1,$2,$3,$4)",[result.rows[0].restaurantId, hashedRestaurantId, 'forgotten-password', 'restaurant']);
+                let result2 = await pool.query("INSERT INTO verification VALUES (default,$1,$2,$3,$4)",[result.rows[0].restaurantId, hashedRestaurantId, 'forgotten-password', 'restaurant']);
                 if(result2.rowCount === 1){
                     res.status(200).json("SUCCESSFULY SENT PASSWORD");
                 }
