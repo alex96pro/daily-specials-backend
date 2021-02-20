@@ -24,7 +24,7 @@ app.use('/restaurant-menu', restaurantMenuRouter);
 app.use('/restaurant-specials', restaurantSpecialsRouter);
 
 app.get('/', (req,res) => {
-    res.json("Daily specials server is up!");
+    res.json('Direct server is online!');
 });
 
 app.listen(port, () => console.log("Server started on port "+port));

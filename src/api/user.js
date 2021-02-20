@@ -25,7 +25,7 @@ export async function feed(req,res) {
         
         let result = await pool.query(`SELECT DISTINCT ON(specials."specialId") specials."specialId" AS "mealId", sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) AS "distance", "location", restaurants.name as "restaurantName", specials.name as "mealName", "photo", "price", "tags", "description", "delivery", "delivery-minimum", "phone", "restaurantId", "working-hours-from"[${req.query.day}], "working-hours-to"[${req.query.day}] `+
         `FROM specials JOIN restaurants USING("restaurantId") `+
-        `WHERE sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) < $3 AND ("delivery" = false OR (sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) < "delivery-range" AND "delivery"=true)) ${tagsQuery} ${deliveryQuery} ${searchQuery} AND "date" = $4 LIMIT $5 OFFSET $6`,
+        `WHERE sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) < $3 AND ("delivery" = false OR (sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) < "delivery-range" AND "delivery"=true)) ${tagsQuery} ${deliveryQuery} ${searchQuery} AND "date" <= $4 LIMIT $5 OFFSET $6`,
         [req.query.lat, req.query.lon, req.query.range, req.query.date, DAILY_SPECIALS_PER_PAGE, (req.query.scrollCount - 1) * DAILY_SPECIALS_PER_PAGE]);
         if(result.rows.length && result.rows.length > 0){
             convertTagsToArray(result.rows);
