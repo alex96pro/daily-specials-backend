@@ -6,8 +6,8 @@ import { convertArrayToString, convertStringToArray, convertTagsToArray } from '
 
 export async function specials(req,res) {
     try{
-        let resultSpecials = await pool.query('SELECT "specialId","name","photo","price","tags","description","deleted" FROM specials WHERE "restaurantId" = $1 AND "date" = $2',
-        [req.params.id, req.query.date]);
+        let resultSpecials = await pool.query('SELECT "specialId","name","photo","price","tags","description","deleted" FROM specials WHERE "restaurantId" = $1 AND "time" <= $2',
+        [req.params.id, req.query.dateAndTime]);
         //specials have field deleted, so real number of "used" specials for some day is all specials including those with value deleted = true
         //restaurant gets only those specials for specific day that are not deleted
         let usedSpecials = resultSpecials.rows.length;
@@ -45,7 +45,7 @@ export async function addNewSpecial(req,res) {
 
         let specialsInsertResult = await pool.query('INSERT INTO "specials" VALUES (default, $1, $2, $3, $4, $5, $6, $7, $8) '+
         'RETURNING "specialId", "name", "photo", "price", "tags", "description"',
-        [req.params.id, req.body.name, photoURL, req.body.date, req.body.price, req.body.tags, req.body.description, false]);
+        [req.params.id, req.body.name, photoURL, req.body.dateAndTime, req.body.price, req.body.tags, req.body.description, false]);
         specialsInsertResult.rows[0].tags = convertStringToArray(specialsInsertResult.rows[0].tags);
 
         return res.json(specialsInsertResult.rows[0]);
