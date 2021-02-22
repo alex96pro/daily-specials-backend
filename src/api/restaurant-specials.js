@@ -29,11 +29,11 @@ export async function addNewSpecial(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         let specialsCheckResult = await pool.query('SELECT COUNT(*) as "dailySpecialsSUM" FROM specials WHERE "restaurantId" = $1',[req.params.id]);
         if(specialsCheckResult.dailySpecialsSUM === DAILY_SPECIALS_LIMIT){
-            return res.status(401).json("UNAUTHORIZED"); //api request like this can not be sent from client app (postman can send request like this)
+            return res.status(401).json("Unauthorized"); //api request like this can not be sent from client app (postman can send request like this)
         }
         req.body.tags = convertArrayToString(req.body.tags);
 
@@ -59,7 +59,7 @@ export async function editSpecial(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         req.body.tags = convertArrayToString(req.body.tags);
         let editSpecialResult = await pool.query('UPDATE specials SET "name" = $1, "price" = $2, "tags" = $3, "description" = $4 '+
@@ -77,7 +77,7 @@ export async function deleteSpecial(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         let deletedSpecialResponse = await pool.query('UPDATE specials SET "deleted" = $1 WHERE "specialId" = $2 RETURNING "specialId", "photo"',
         [true, req.params.id]);

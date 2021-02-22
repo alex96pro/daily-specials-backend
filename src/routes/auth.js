@@ -10,7 +10,7 @@ import { addNewAddress } from '../api/auth.js';
 
 const router = express.Router();
 
-router.get('/login', login);
+router.post('/login', login);
 router.post('/sign-up', signUp);
 router.post('/verify-account', verifyAccount);
 router.post('/forgotten-password', forgottenPassword);

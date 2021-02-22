@@ -25,7 +25,7 @@ export async function addNewMeal(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         req.body.tags = convertArrayToString(req.body.tags);
         const file = req.body.photo;
@@ -50,7 +50,7 @@ export async function editMenuMeal(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         req.body.tags = convertArrayToString(req.body.tags);
         let photo = req.body.photo;
@@ -85,7 +85,7 @@ export async function deleteMenuMeal(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         let deletedMealResult = await pool.query('DELETE FROM meals WHERE "mealId" = $1 RETURNING "mealId", "photo"',[req.params.id]);
         
@@ -105,7 +105,7 @@ export async function addCategory(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         let categoriesResult = await pool.query('SELECT "categories" FROM restaurants WHERE "email" = $1',[decodedEmail]);
         let newCategories = convertStringToArray(categoriesResult.rows[0].categories);
@@ -125,7 +125,7 @@ export async function deleteCategory(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         let categoriesResult = await pool.query('SELECT "restaurantId", "categories" FROM restaurants WHERE "email" = $1',[decodedEmail]);
         let newCategories = convertStringToArray(categoriesResult.rows[0].categories);

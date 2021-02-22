@@ -8,16 +8,16 @@ import { sendVerifyEmailRestaurant, sendForgottenPasswordRestaurant } from '../c
 
 export async function login(req,res) {
     try{
-        let result = await pool.query('SELECT * FROM restaurants WHERE "email" = $1',[req.query.email]);
+        let result = await pool.query('SELECT * FROM restaurants WHERE "email" = $1',[req.body.email]);
         if(result && result.rows.length > 0){
-            if(!(await bcrypt.compare(req.query.password, result.rows[0].password))){
-                return res.status(401).json("WRONG PASSWORD");
+            if(!(await bcrypt.compare(req.body.password, result.rows[0].password))){
+                return res.status(401).json("Incorrect password");
             }
             else if(result.rows[0].verified === false){
-                return res.status(403).json("NOT VERIFIED");
+                return res.status(403).json("Please check your email and verify your account");
             }else{
                 //SUCCESSFUL LOGIN , CREATING ACCESS TOKEN, returning restaurantId and restaurant info for profile
-                const accessToken = jwt.sign({email:req.query.email, password:req.query.password}, process.env.ACCESS_TOKEN_SECRET);
+                const accessToken = jwt.sign({email:req.body.email, password:req.body.password}, process.env.ACCESS_TOKEN_SECRET);
                 removeSecondsFromTime(result.rows[0]);
                 let workingHours = mergeWorkingHoursArrays(result.rows[0]);
                 let restaurant = {name: result.rows[0].name, location: result.rows[0].location, lat: result.rows[0].lat, lon: result.rows[0].lon,
@@ -27,7 +27,7 @@ export async function login(req,res) {
                 return res.json({accessToken: accessToken, restaurantId: result.rows[0].restaurantId, restaurant:restaurant});
             }
         }else{
-            return res.status(401).json("WRONG EMAIL OR PASSWORD");
+            return res.status(401).json("Incorrect email");
         }
     }catch(err){
         console.log(err);
@@ -75,10 +75,10 @@ export async function signUpFirstStep(req,res) {
 export async function signUpComplete(req,res) {
     try{
         if(!req.body.workingHours){
-            return res.status(400).json("THIRD STEP NOT COMPLETED");
+            return res.status(400).json("Third step is not completed");
         }
         if(!req.body.location || !req.body.lat || !req.body.lon){
-            return res.status(400).json("SECOND STEP NOT COMPLETED");
+            return res.status(400).json("Second step is not completed");
         }
         let workingHoursChecked = checkWorkingHours(req.body.workingHours.workingHoursFrom, req.body.workingHours.workingHoursTo);
         
@@ -92,9 +92,9 @@ export async function signUpComplete(req,res) {
         await pool.query("INSERT INTO verification VALUES (default,$1,$2,$3,$4)",
         [result.rows[0].restaurantId, hashedRestaurantId, 'account-verification', 'restaurant']);
         if(sendVerifyEmailRestaurant(req.body.email, hashedRestaurantId)){
-            res.status(200).json('SUCCESSFULY SIGNED UP FOR RESTAURANT');
+            res.status(200).json('Successfully signed up for your restaurant');
         }else{
-            res.status(500).json("SENDGRID ERROR");
+            res.status(500).json("Error while sending email");
         }
     }catch(err){
         console.log(err);
@@ -106,12 +106,12 @@ export async function verifyAccount(req,res) {
         let result = await pool.query('UPDATE restaurants SET "verified" = true WHERE "restaurantId" = (SELECT "userId" FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3)',
         [req.body.hashedRestaurantId, 'account-verification', 'restaurant']);
         if(result.rowCount === 1){
-            res.status(200).json("VERIFIED");
+            res.status(200).json("Successfully verified");
         }
         await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3', [req.body.hashedRestaurantId, 'account-verification', 'restaurant']);
     }catch(err){
         console.log(err);
-        res.status(500).json("SERVER ERROR");
+        res.status(500).json(err);
     }
 };
 export async function forgottenPassword(req,res) {
@@ -128,13 +128,13 @@ export async function forgottenPassword(req,res) {
             if(sendForgottenPasswordRestaurant(result.rows[0].email, hashedRestaurantId)){
                 let result2 = await pool.query("INSERT INTO verification VALUES (default,$1,$2,$3,$4)",[result.rows[0].restaurantId, hashedRestaurantId, 'forgotten-password', 'restaurant']);
                 if(result2.rowCount === 1){
-                    res.status(200).json("SUCCESSFULY SENT PASSWORD");
+                    res.status(200).json("Successfully sent password");
                 }
             }else{
-                res.status(500).json("SENDGRID ERROR");
+                res.status(500).json("Error while sending email");
             }
         }else{
-            res.status(401).json("EMAIL DOESNT EXIST");
+            res.status(401).json("Email doesnt exist");
         }
     }catch(err){
         console.log(err);
@@ -149,9 +149,9 @@ export async function newPassword(req,res) {
         if(result.rowCount === 1){
             await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3', [req.body.hashedId, 'forgotten-password', 'restaurant']);
         }else{
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
-        res.status(200).json("SUCCESSFULY CREATED NEW PASSWORD");
+        res.status(200).json("Successfully created new password");
     }catch(err){
         console.log(err);
         res.status(500).json(err);
@@ -161,12 +161,12 @@ export async function updateProfile(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         let checkNameResult = await pool.query('SELECT "restaurantId" FROM restaurants WHERE "name" = $1 AND "email" != $2',
         [req.body.name, decodedEmail]);
         if(checkNameResult.rows && checkNameResult.rows.length > 0){
-            return res.status(400).json("NAME OF RESTAURANT EXISTS");
+            return res.status(400).json("Name is already in use");
         }
         let queryForLocation = '';
         if(req.body.location && req.body.lat && req.body.lon){
@@ -208,11 +208,11 @@ export async function changePassword(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         let result = await pool.query('SELECT "password" from restaurants WHERE "email" = $1',[decodedEmail]);
         if(!(await bcrypt.compare(req.body.oldPassword, result.rows[0].password))){
-            return res.status(400).json("WRONG OLD PASSWORD");
+            return res.status(400).json("Incorrect old password");
         }else{
             const hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
             pool.query('UPDATE restaurants SET "password" = $1 WHERE "email" = $2',[hashedPassword, decodedEmail]);
@@ -220,37 +220,33 @@ export async function changePassword(req,res) {
         }
     }catch(err){
         console.log(err);
-        res.status(500);
+        res.status(500).json(err);
     }
 };
 export async function disableDelivery(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         let result = await pool.query('SELECT "password" FROM restaurants WHERE "email" = $1',[decodedEmail]);
-        if(result && result.rows.length > 0){
-            if(!(await bcrypt.compare(req.body.password, result.rows[0].password))){
-                return res.status(400).json("WRONG PASSWORD");
-            }else{
-                let result = await pool.query('UPDATE restaurants SET "delivery" = false, "delivery-range" = 0, "delivery-minimum" = 0 WHERE "email" = $1 '+
-                'RETURNING "delivery", "delivery-range" as "deliveryRange", "delivery-minimum" as "deliveryMinimum"',[decodedEmail]);
-                res.json({...result.rows[0]});
-            }
+        if(!(await bcrypt.compare(req.body.password, result.rows[0].password))){
+            return res.status(400).json("Incorrect password");
         }else{
-            res.status(401).json("UNAUTHORIZED");
+            let result = await pool.query('UPDATE restaurants SET "delivery" = false, "delivery-range" = 0, "delivery-minimum" = 0 WHERE "email" = $1 '+
+            'RETURNING "delivery", "delivery-range" as "deliveryRange", "delivery-minimum" as "deliveryMinimum"',[decodedEmail]);
+            res.json({...result.rows[0]});
         }
     }catch(err){
         console.log(err);
-        res.status(500);
+        res.status(500).json(err);
     }
 };
 export async function changeWorkingHours(req,res) {
     try{
         let decodedEmail = decodeToken(req.headers.authorization);
         if(decodedEmail === null){
-            return res.status(401).json("UNAUTHORIZED");
+            return res.status(401).json("Unauthorized");
         }
         let workingHoursChecked = checkWorkingHours(req.body.workingHoursFrom, req.body.workingHoursTo);
         let result = await pool.query(`UPDATE restaurants SET "working-hours-from" = '{${workingHoursChecked.workingHoursFrom}}', "working-hours-to" = '{${workingHoursChecked.workingHoursTo}}' WHERE `+
@@ -260,6 +256,6 @@ export async function changeWorkingHours(req,res) {
         res.json(workingHours);
     }catch(err){
         console.log(err);
-        res.status(500);
+        res.status(500).json(err);
     }
 };
