@@ -97,7 +97,7 @@ export async function forgottenPassword(req,res) {
             }
             
         }else{
-            res.status(400).json("Email doesn't exist");
+            res.status(401).json("Email doesn't exist");
         }
     }catch(err){
         console.log(err);
