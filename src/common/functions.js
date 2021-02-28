@@ -31,7 +31,17 @@ export function removeSecondsFromTime(restaurant) {
             restaurant["working-hours-to"][i] = restaurant["working-hours-to"][i].substring(0, restaurant["working-hours-to"][i].length - 3);
         }
     }
-}
+};
+export function getDateFromTimestamp(timestamp) {
+    let day = timestamp.getDate() < 10 ? '0' + timestamp.getDate() : timestamp.getDate();
+    let month = (timestamp.getMonth() + 1) < 10 ? '0' + (timestamp.getMonth() + 1) : (timestamp.getMonth() + 1);
+    return timestamp.getFullYear() + '-' + month + '-' + day;
+};
+export function getTimeFromTimestamp(timestamp) {
+    let hours = timestamp.getHours() < 10 ? '0' + timestamp.getHours() : timestamp.getHours();
+    let minutes = timestamp.getMinutes() < 10 ? '0' + timestamp.getMinutes() : timestamp.getMinutes();
+    return hours + ':' + minutes;
+};
 export function mergeWorkingHoursArrays(restaurant) {
     let workingHours = [];
     for(let i = 0; i < restaurant["working-hours-from"].length; i++){
