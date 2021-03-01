@@ -1,7 +1,7 @@
 import pool from '../config/dbConfig.js';
 import cloudinary from '../config/cloudinary.js';
 import decodeToken from '../config/authorization.js';
-import { convertArrayToString, convertStringToArray, convertTagsToArray } from '../common/functions.js';
+import { convertArrayToString, convertStringToArray, convertTagsToArray, getDateFromTimestamp, getTimeFromTimestamp } from '../common/functions.js';
 
 export async function menu(req,res) {
     try{
@@ -95,6 +95,39 @@ export async function deleteMenuMeal(req,res) {
         let publicId = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
         publicId = 'meals/'+publicId; // to delete photo from cloudinary, public id is needed = name before file extension + folders before that
         await cloudinary.uploader.destroy(publicId);
+    }catch(err){
+        console.log(err);
+        res.status(500).json(err);
+    }
+};
+
+export async function convertMealToSpecial(req,res) {
+    try{
+        let decodedEmail = decodeToken(req.headers.authorization);
+        if(decodedEmail === null){
+            return res.status(401).json("Unauthorized");
+        }
+        req.body.tags = convertArrayToString(req.body.tags);
+        req.body.timestamp = req.body.date + ' ' + req.body.time + ':00';
+        if(req.body.newPhoto){
+            const file = req.body.newPhoto;
+            const uploadResponse = await cloudinary.v2.uploader.upload(file, {
+                folder:'specials'
+            });
+            req.body.photo = uploadResponse.url;
+        }
+        let checkSpecialsLimitResult = await pool.query('SELECT COUNT(*) AS "specials" FROM specials WHERE "restaurantId" = $1 AND "timestamp"::date = $2',
+        [req.body.restaurantId, req.body.date]);
+        if(checkSpecialsLimitResult.rows[0]['specials'] >= 3){
+            return res.status(403).json('DAILY SPECIALS LIMIT FULL');
+        }
+        let specialsInsertResult = await pool.query('INSERT INTO "specials" VALUES (default, $1, $2, $3, $4, $5, $6, $7, $8) '+
+        'RETURNING "specialId", "name", "photo", "price", "tags", "description", "timestamp"',
+        [req.body.restaurantId, req.body.name, req.body.photo, req.body.timestamp, req.body.price, req.body.tags, req.body.description, false]);
+        specialsInsertResult.rows[0].tags = convertStringToArray(specialsInsertResult.rows[0].tags);
+        specialsInsertResult.rows[0].date = getDateFromTimestamp(specialsInsertResult.rows[0].timestamp);
+        specialsInsertResult.rows[0].time = getTimeFromTimestamp(specialsInsertResult.rows[0].timestamp);
+        return res.json(specialsInsertResult.rows[0]);
     }catch(err){
         console.log(err);
         res.status(500).json(err);
