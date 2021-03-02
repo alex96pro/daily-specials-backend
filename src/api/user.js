@@ -58,9 +58,9 @@ export async function feed(req,res) {
 export async function menu(req,res) {
     try{
         let clientTime = req.params.time;
-        let result = await pool.query(`SELECT DISTINCT ON(meals."mealId") meals."mealId", meals.name as "mealName", "photo", "price", "tags", "description", "category" `+
-        `FROM meals JOIN restaurants USING("restaurantId") WHERE "restaurantId" = $1`,[req.params.id]);
-        if(result.rows.length && result.rows.length > 0){
+        let result = await pool.query(`SELECT "mealId", meals.name as "mealName", "photo", "price", "tags", "description", "category", "modifier_required", "modifier_optional" `+
+        `FROM meals LEFT OUTER JOIN modifiers_required USING("modifier_requiredId") LEFT OUTER JOIN modifiers_optional USING("modifier_optionalId") WHERE meals."restaurantId" = $1`,[req.params.id]);
+        if(result.rows.length && result.rows.length > 0){ 
             convertTagsToArray(result.rows);
             let result2 = await pool.query(`SELECT "restaurantId", "name" as "restaurantName", "location", "delivery", "delivery-minimum" as "deliveryMinimum", "phone", "categories", "logo", "working-hours-from"[${req.params.day}], "working-hours-to"[${req.params.day}] FROM restaurants WHERE "restaurantId" = $1`,[req.params.id]);
             result2.rows[0].categories = convertStringToArray(result2.rows[0].categories);
