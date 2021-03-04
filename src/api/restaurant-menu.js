@@ -5,9 +5,12 @@ import { convertArrayToString, convertStringToArray, convertTagsToArray, getDate
 
 export async function menu(req,res) {
     try{
+        let decodedEmail = decodeToken(req.headers.authorization);
+        if(decodedEmail === null){
+            return res.status(401).json("Unauthorized");
+        }
         let mealsResult = await pool.query('SELECT "mealId", "name", "photo", "price", "tags", "description", "category" FROM meals WHERE "restaurantId" = $1 ORDER BY "mealId"',[req.params.id]);
         let categoriesResult = await pool.query('SELECT "categories" FROM restaurants WHERE "restaurantId" = $1', [req.params.id]);
-        
         if(mealsResult.rows && mealsResult.rows.length > 0){
             convertTagsToArray(mealsResult.rows);
         }else{

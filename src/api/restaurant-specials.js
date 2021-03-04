@@ -6,6 +6,10 @@ import { convertArrayToString, convertStringToArray, convertTagsToArray, getDate
 
 export async function specials(req,res) {
     try{
+        let decodedEmail = decodeToken(req.headers.authorization);
+        if(decodedEmail === null){
+            return res.status(401).json("Unauthorized");
+        }
         let resultSpecials = await pool.query('SELECT "specialId","name","photo","price","tags","description","timestamp","deleted" FROM specials WHERE "restaurantId" = $1 AND "timestamp" >= $2 ORDER BY "timestamp"',
         [req.params.id, req.query.dateAndTime]);
         for(let i = 0; i < resultSpecials.rows.length; i++) {

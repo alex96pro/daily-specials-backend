@@ -58,8 +58,7 @@ export async function feed(req,res) {
 export async function menu(req,res) {
     try{
         let clientTime = req.params.time;
-        let result = await pool.query(`SELECT "mealId", meals.name as "mealName", "photo", "price", "tags", "description", "category", "modifier_required", "modifier_optional" `+
-        `FROM meals LEFT OUTER JOIN modifiers_required USING("modifier_requiredId") LEFT OUTER JOIN modifiers_optional USING("modifier_optionalId") WHERE meals."restaurantId" = $1`,[req.params.id]);
+        let result = await pool.query(`SELECT "mealId", "name" as "mealName", "photo", "price", "tags", "description", "category" FROM "meals" WHERE "restaurantId" = $1`,[req.params.id]);
         if(result.rows.length && result.rows.length > 0){ 
             convertTagsToArray(result.rows);
             let result2 = await pool.query(`SELECT "restaurantId", "name" as "restaurantName", "location", "delivery", "delivery-minimum" as "deliveryMinimum", "phone", "categories", "logo", "working-hours-from"[${req.params.day}], "working-hours-to"[${req.params.day}] FROM restaurants WHERE "restaurantId" = $1`,[req.params.id]);
@@ -79,6 +78,23 @@ export async function menu(req,res) {
         }else{
             res.json({meals: [], restaurant: {}});
         }
+    }catch(err){
+        console.log(err);
+        res.status(500).json(err);
+    }
+};
+
+export async function mealModifiers(req,res) {
+    try{
+        let modifiersResponse = [];
+        if(req.params.special === "true"){
+            modifiersResponse = await pool.query('SELECT "modifier" FROM modifiers JOIN meal_modifier USING("modifierId") JOIN specials ON(meal_modifier."mealId" = "specialId") '+
+            'WHERE "specialId" = $1 AND "special" = true',[req.params.id]);
+        }else{
+            modifiersResponse = await pool.query('SELECT "modifier" FROM modifiers JOIN meal_modifier USING("modifierId") JOIN meals USING("mealId") '+
+            'WHERE meals."mealId" = $1 AND "special" = false',[req.params.id]);
+        }
+        return res.json(modifiersResponse.rows);
     }catch(err){
         console.log(err);
         res.status(500).json(err);

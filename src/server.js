@@ -8,6 +8,7 @@ import userRouter from './routes/user.js';
 import restaurantAuthRouter from './routes/restaurant-auth.js';
 import restaurantMenuRouter from './routes/restaurant-menu.js';
 import restaurantSpecialsRouter from './routes/restaurant-specials.js';
+import restaurantModifiersRouter from './routes/restaurant-modifiers.js';
 import initSockets from './sockets/sockets.js';
 
 dotenv.config();
@@ -34,6 +35,7 @@ app.use('/user', userRouter);
 app.use('/restaurant-auth', restaurantAuthRouter);
 app.use('/restaurant-menu', restaurantMenuRouter);
 app.use('/restaurant-specials', restaurantSpecialsRouter);
+app.use('/restaurant-modifiers', restaurantModifiersRouter);
 
 app.get('/', (req,res) => {
     res.json('Direct server is online!');
