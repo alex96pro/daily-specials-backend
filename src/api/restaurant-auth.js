@@ -11,7 +11,7 @@ export async function login(req,res) {
         let result = await pool.query('SELECT * FROM restaurants WHERE "email" = $1',[req.body.email]);
         if(result && result.rows.length > 0){
             if(!(await bcrypt.compare(req.body.password, result.rows[0].password))){
-                return res.status(401).json("Incorrect password");
+                return res.status(400).json("Incorrect password");
             }
             else if(result.rows[0].verified === false){
                 return res.status(403).json("Please check your email and verify your account");
@@ -27,7 +27,7 @@ export async function login(req,res) {
                 return res.json({accessToken: accessToken, restaurantId: result.rows[0].restaurantId, restaurant:restaurant});
             }
         }else{
-            return res.status(401).json("Incorrect email");
+            return res.status(400).json("Incorrect email");
         }
     }catch(err){
         console.log(err);
@@ -44,7 +44,7 @@ export async function signUpFirstStep(req,res) {
                 // RESTAURANT ALREADY DID FIRST STEP OF SIGN UP
                 if(result.rows.length > 1){
                     //RESTAURANT NAME EXISTS (USER RETURNED TO FIRST STEP AND CHANGED RESTAURANT NAME) (TOP QUERY RETURNED 2 VALUES)
-                     return res.status(401).json("Restaurant with that name already exists");
+                     return res.status(403).json("Restaurant with that name already exists");
                 }
                 const hashedPassword = await bcrypt.hash(req.body.password, 10);
                 await pool.query('UPDATE restaurants SET "name"=$1, "delivery"=$2, "delivery-range"=$3, "delivery-minimum"=$4, "phone"=$5, "password"=$6 '+
@@ -56,7 +56,7 @@ export async function signUpFirstStep(req,res) {
                 return res.status(400).json("Email already exists");
             }else{
                 //RESTAURANT NAME EXISTS
-                return res.status(401).json("Restaurant with that name already exists");
+                return res.status(403).json("Restaurant with that name already exists");
             }
         }else{
             //RESTAURANT FIRST TIME DOING FIRST STEP OF SIGN UP
@@ -107,6 +107,8 @@ export async function verifyAccount(req,res) {
         [req.body.hashedRestaurantId, 'account-verification', 'restaurant']);
         if(result.rowCount === 1){
             res.status(200).json("Successfully verified");
+        }else{
+            return res.status(401).json("Unauthorized");
         }
         await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3', [req.body.hashedRestaurantId, 'account-verification', 'restaurant']);
     }catch(err){
@@ -134,7 +136,7 @@ export async function forgottenPassword(req,res) {
                 res.status(500).json("Error while sending email");
             }
         }else{
-            res.status(401).json("Email doesnt exist");
+            res.status(403).json("Email doesnt exist");
         }
     }catch(err){
         console.log(err);

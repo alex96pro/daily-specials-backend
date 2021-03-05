@@ -28,3 +28,18 @@ export async function addNewModifier(req,res) {
         res.status(500).json(err);
     }
 };
+
+export async function deleteModifier(req,res) {
+    try{
+        let decodedEmail = decodeToken(req.headers.authorization);
+        if(decodedEmail === null){
+            return res.status(401).json("Unauthorized");
+        }
+        let deletedResult = await pool.query('DELETE FROM "modifiers" WHERE "modifierId" = $1 RETURNING "modifierId"', [req.params.id]);
+        await pool.query('DELETE FROM "meal_modifier" WHERE "modifierId" = $1', [req.params.id]);
+        return res.json(deletedResult.rows[0].modifierId);
+    }catch(err){
+        console.log(err);
+        res.status(500).json(err);
+    }
+};
