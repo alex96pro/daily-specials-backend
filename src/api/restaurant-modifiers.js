@@ -7,7 +7,7 @@ export async function modifiers(req,res) {
         if(decodedEmail === null){
             return res.status(401).json("Unauthorized");
         }
-        let modifiersResult = await pool.query('SELECT "modifierId", "modifier" FROM modifiers WHERE "restaurantId" = $1',[req.params.id]);
+        let modifiersResult = await pool.query(`SELECT "modifierId", "modifier" FROM modifiers WHERE "restaurantId" = $1 ORDER BY modifier->>'name'`,[req.params.id]);
         return res.json(modifiersResult.rows);
     }catch(err){
         console.log(err);
@@ -28,6 +28,20 @@ export async function addNewModifier(req,res) {
         res.status(500).json(err);
     }
 };
+
+export async function editModifier(req,res) {
+    try{
+        let decodedEmail = decodeToken(req.headers.authorization);
+        if(decodedEmail === null){
+            return res.status(401).json("Unauthorized");
+        }
+        let updateResult = await pool.query('UPDATE modifiers SET "modifier" = $1 WHERE "modifierId" = $2 RETURNING "modifierId", "modifier"', [req.body.modifier, req.body.modifierId]);
+        return res.json(updateResult.rows[0]);
+    }catch(err){
+        console.log(err);
+        res.status(500).json(err);
+    }
+}
 
 export async function deleteModifier(req,res) {
     try{
