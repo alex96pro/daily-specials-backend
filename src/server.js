@@ -32,10 +32,10 @@ app.use(express.urlencoded({ limit: '5mb', extended: true }));
 //ROUTES
 app.use('/auth', authRouter);
 app.use('/user', userRouter);
-app.use('/restaurant-auth', restaurantAuthRouter);
-app.use('/restaurant-menu', restaurantMenuRouter);
-app.use('/restaurant-specials', restaurantSpecialsRouter);
-app.use('/restaurant-modifiers', restaurantModifiersRouter);
+app.use('/restaurant/auth', restaurantAuthRouter);
+app.use('/restaurant/menu', restaurantMenuRouter);
+app.use('/restaurant/specials', restaurantSpecialsRouter);
+app.use('/restaurant/modifiers', restaurantModifiersRouter);
 
 app.get('/', (req,res) => {
     res.json('Direct server is online!');

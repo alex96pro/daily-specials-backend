@@ -252,7 +252,7 @@ export async function changeWorkingHours(req,res) {
         }
         let workingHoursChecked = checkWorkingHours(req.body.workingHoursFrom, req.body.workingHoursTo);
         let result = await pool.query(`UPDATE restaurants SET "working-hours-from" = '{${workingHoursChecked.workingHoursFrom}}', "working-hours-to" = '{${workingHoursChecked.workingHoursTo}}' WHERE `+
-        `"restaurantId" = $1 RETURNING "working-hours-from", "working-hours-to"`,[req.params.id]);
+        `"restaurantId" = $1 RETURNING "working-hours-from", "working-hours-to"`,[req.body.restaurantId]);
         removeSecondsFromTime(result.rows[0]);
         let workingHours = mergeWorkingHoursArrays(result.rows[0]);
         res.json(workingHours);

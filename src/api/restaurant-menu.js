@@ -42,6 +42,15 @@ export async function addNewMeal(req,res) {
         [req.body.restaurantId, req.body.name, photoURL, req.body.price, req.body.tags, req.body.description, req.body.category]);
 
         newMealResult.rows[0].tags = convertStringToArray(newMealResult.rows[0].tags);
+        // insert modifiers
+        if(req.body.modifiers.length > 0){
+            let meal_modifier_values = "";
+            for(let i = 0; i < req.body.modifiers.length; i++){
+                meal_modifier_values += "(default," + newMealResult.rows[0].mealId + "," + req.body.modifiers[i] + ",false),";
+            }
+            meal_modifier_values = meal_modifier_values.substring(0, meal_modifier_values.length - 1);
+            await pool.query(`INSERT INTO meal_modifier VALUES ${meal_modifier_values}`);
+        }
         return res.json(newMealResult.rows[0]);
     }catch(err){
         console.log(err);
@@ -70,6 +79,18 @@ export async function editMenuMeal(req,res) {
 
         updateMealResult.rows[0].tags = convertStringToArray(updateMealResult.rows[0].tags);
 
+        //update modifiers
+        if(req.body.modifiersChanged){
+            await pool.query('DELETE FROM meal_modifier WHERE "mealId" = $1 AND "special" = false',[req.body.mealId]);
+            if(req.body.modifiers.length > 0){
+                let meal_modifier_values = "";
+                for(let i = 0; i < req.body.modifiers.length; i++){
+                    meal_modifier_values += "(default," + req.body.mealId + "," + req.body.modifiers[i] + ",false),";
+                }
+                meal_modifier_values = meal_modifier_values.substring(0, meal_modifier_values.length - 1);
+                await pool.query(`INSERT INTO meal_modifier VALUES ${meal_modifier_values}`);
+            }
+        }
         res.json(updateMealResult.rows[0]); //return edited meal
 
         if(req.body.newPhoto){ // delete old photo from cloudinary
@@ -91,8 +112,8 @@ export async function deleteMenuMeal(req,res) {
             return res.status(401).json("Unauthorized");
         }
         let deletedMealResult = await pool.query('DELETE FROM meals WHERE "mealId" = $1 RETURNING "mealId", "photo"',[req.params.id]);
-        
         res.json(deletedMealResult.rows[0].mealId); //return deleted mealId
+        await pool.query('DELETE FROM meal_modifier WHERE "mealId" = $1 AND "special" = false',[req.params.id]);
         //delete photo from cloudinary
         let url = deletedMealResult.rows[0].photo;
         let publicId = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
@@ -130,6 +151,14 @@ export async function convertMealToSpecial(req,res) {
         specialsInsertResult.rows[0].tags = convertStringToArray(specialsInsertResult.rows[0].tags);
         specialsInsertResult.rows[0].date = getDateFromTimestamp(specialsInsertResult.rows[0].timestamp);
         specialsInsertResult.rows[0].time = getTimeFromTimestamp(specialsInsertResult.rows[0].timestamp);
+        if(req.body.modifiers.length > 0){
+            let meal_modifier_values = "";
+            for(let i = 0; i < req.body.modifiers.length; i++){
+                meal_modifier_values += "(default," + specialsInsertResult.rows[0].specialId + "," + req.body.modifiers[i] + ",true),";
+            }
+            meal_modifier_values = meal_modifier_values.substring(0, meal_modifier_values.length - 1);
+            await pool.query(`INSERT INTO meal_modifier VALUES ${meal_modifier_values}`);
+        }
         return res.json(specialsInsertResult.rows[0]);
     }catch(err){
         console.log(err);
@@ -165,19 +194,33 @@ export async function deleteCategory(req,res) {
         }
         let categoriesResult = await pool.query('SELECT "restaurantId", "categories" FROM restaurants WHERE "email" = $1',[decodedEmail]);
         let newCategories = convertStringToArray(categoriesResult.rows[0].categories);
-        newCategories = newCategories.filter(category => category !== req.params.category);
+        newCategories = newCategories.filter(category => category !== req.params.id);
         let newCategoriesString = convertArrayToString(newCategories);
         let newCategoriesResult = await pool.query('UPDATE restaurants SET "categories" = $1 WHERE "email" = $2 RETURNING "categories"',
         [newCategoriesString, decodedEmail]);
         let updatedCategories = convertStringToArray(newCategoriesResult.rows[0].categories)
         //UPDATE AFFECTED MEALS
         let affectedMealsResult = await pool.query('UPDATE meals SET "category" = $1 WHERE "category" = $2 AND "restaurantId" = $3 RETURNING "mealId"', 
-        [null, req.params.category, categoriesResult.rows[0].restaurantId]);
+        [null, req.params.id, categoriesResult.rows[0].restaurantId]);
         let mealIdsArray = [];
         for(let i = 0; i < affectedMealsResult.rows.length; i++){
             mealIdsArray.push(affectedMealsResult.rows[i].mealId);
         }
         return res.json({categories: updatedCategories, mealIds: mealIdsArray});
+    }catch(err){
+        console.log(err);
+        res.status(500).json(err);
+    }
+};
+
+export async function mealModifiers(req,res) {
+    try{
+        let decodedEmail = decodeToken(req.headers.authorization);
+        if(decodedEmail === null){
+            return res.status(401).json("Unauthorized");
+        }
+        let modifiersResult = await pool.query(`SELECT "modifierId", "modifier" FROM modifiers JOIN meal_modifier USING("modifierId") WHERE "mealId" = $1 AND "special" = false`,[req.params.id]);
+        return res.json(modifiersResult.rows);
     }catch(err){
         console.log(err);
         res.status(500).json(err);

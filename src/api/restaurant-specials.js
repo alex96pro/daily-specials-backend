@@ -45,10 +45,19 @@ export async function addNewSpecial(req,res) {
 
         let specialsInsertResult = await pool.query('INSERT INTO "specials" VALUES (default, $1, $2, $3, $4, $5, $6, $7, $8) '+
         'RETURNING "specialId", "name", "photo", "price", "tags", "description", "timestamp"',
-        [req.params.id, req.body.name, photoURL, req.body.dateAndTime, req.body.price, req.body.tags, req.body.description, false]);
+        [req.body.restaurantId, req.body.name, photoURL, req.body.dateAndTime, req.body.price, req.body.tags, req.body.description, false]);
         specialsInsertResult.rows[0].tags = convertStringToArray(specialsInsertResult.rows[0].tags);
         specialsInsertResult.rows[0].date = getDateFromTimestamp(specialsInsertResult.rows[0].timestamp);
         specialsInsertResult.rows[0].time = getTimeFromTimestamp(specialsInsertResult.rows[0].timestamp);
+        // insert modifiers
+        if(req.body.modifiers.length > 0){
+            let meal_modifier_values = "";
+            for(let i = 0; i < req.body.modifiers.length; i++){
+                meal_modifier_values += "(default," + specialsInsertResult.rows[0].specialId + "," + req.body.modifiers[i] + ",true),";
+            }
+            meal_modifier_values = meal_modifier_values.substring(0, meal_modifier_values.length - 1);
+            await pool.query(`INSERT INTO meal_modifier VALUES ${meal_modifier_values}`);
+        }
         return res.json(specialsInsertResult.rows[0]);
     }catch(err){
         console.log(err);
@@ -79,6 +88,18 @@ export async function editSpecial(req,res) {
         editSpecialResult.rows[0].date = getDateFromTimestamp(editSpecialResult.rows[0].timestamp);
         editSpecialResult.rows[0].time = getTimeFromTimestamp(editSpecialResult.rows[0].timestamp);
         delete editSpecialResult.rows[0].timestamp;
+        //update modifiers
+        if(req.body.modifiersChanged){
+            await pool.query('DELETE FROM meal_modifier WHERE "mealId" = $1 AND "special" = true',[req.body.specialId]);
+            if(req.body.modifiers.length > 0){
+                let meal_modifier_values = "";
+                for(let i = 0; i < req.body.modifiers.length; i++){
+                    meal_modifier_values += "(default," + req.body.specialId + "," + req.body.modifiers[i] + ",true),";
+                }
+                meal_modifier_values = meal_modifier_values.substring(0, meal_modifier_values.length - 1);
+                await pool.query(`INSERT INTO meal_modifier VALUES ${meal_modifier_values}`);
+            }
+        }
         res.json(editSpecialResult.rows[0]);
         if(req.body.newPhoto){ // delete old photo from cloudinary
             let url = req.body.photo;
@@ -99,6 +120,7 @@ export async function deleteSpecial(req,res) {
         }
         let deleteSpecialResult = await pool.query('DELETE FROM specials WHERE "specialId" = $1 RETURNING "specialId","photo"',[req.params.id]);
         res.json(deleteSpecialResult.rows[0].specialId); //return deleted specialId
+        await pool.query('DELETE FROM meal_modifier WHERE "mealId" = $1 AND "special" = true',[req.params.id]);
         //delete photo from cloudinary
         let url = deleteSpecialResult.rows[0].photo;
         let publicId = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
@@ -118,6 +140,7 @@ export async function deleteSpecialFromToday(req,res) {
         let deletedSpecialResponse = await pool.query('UPDATE specials SET "deleted" = $1 WHERE "specialId" = $2 RETURNING "specialId", "photo", "name"',
         [true, req.params.id]);
         res.json(deletedSpecialResponse.rows[0].specialId);
+        await pool.query('DELETE FROM meal_modifier WHERE "mealId" = $1 AND "special" = true',[req.params.id]);
         //delete photo from cloudinary
         let url = deletedSpecialResponse.rows[0].photo;
         let publicId = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
@@ -128,3 +151,18 @@ export async function deleteSpecialFromToday(req,res) {
         res.status(500).json(err);
     }
 };
+
+export async function specialModifiers(req,res) {
+    try{
+        let decodedEmail = decodeToken(req.headers.authorization);
+        if(decodedEmail === null){
+            return res.status(401).json("Unauthorized");
+        }
+        let modifiersResult = await pool.query(`SELECT "modifierId", "modifier" FROM modifiers JOIN meal_modifier USING("modifierId") WHERE "mealId" = $1 AND "special" = true`,[req.params.id]);
+        return res.json(modifiersResult.rows);
+    }catch(err){
+        console.log(err);
+        res.status(500).json(err);
+    }
+};
+

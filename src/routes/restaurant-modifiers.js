@@ -3,10 +3,11 @@ import { modifiers, addNewModifier, editModifier, deleteModifier } from '../api/
 
 const router = express.Router();
 
-router.get('/modifiers/:id', modifiers);
-router.post('/add-new-modifier', addNewModifier);
-router.post('/edit-modifier', editModifier);
-router.delete('/delete-modifier/:id', deleteModifier);
+// /restaurant/modifiers
+router.get('/:id', modifiers);
+router.post('/add', addNewModifier);
+router.post('/edit', editModifier);
+router.delete('/delete/:id', deleteModifier);
 
 export default router;
 

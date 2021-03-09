@@ -1,15 +1,17 @@
 import express from 'express';
-import { menu, addNewMeal, editMenuMeal, deleteMenuMeal, addCategory, deleteCategory, convertMealToSpecial } from '../api/restaurant-menu.js';
+import { menu, addNewMeal, editMenuMeal, deleteMenuMeal, addCategory, deleteCategory, convertMealToSpecial, mealModifiers } from '../api/restaurant-menu.js';
 
 const router = express.Router();
 
-router.get('/menu/:id', menu);
-router.post('/add-new-meal', addNewMeal);
-router.post('/edit-menu-meal', editMenuMeal);
+// /restaurant/menu
+router.get('/:id', menu);
+router.post('/meal/add', addNewMeal);
+router.post('/meal/edit', editMenuMeal);
+router.delete('/meal/delete/:id', deleteMenuMeal);
+router.get('/meal/modifiers/:id', mealModifiers);
 router.post('/convert-meal-to-special', convertMealToSpecial);
-router.delete('/delete-menu-meal/:id', deleteMenuMeal);
-router.post('/add-category', addCategory);
-router.delete('/delete-category/:category', deleteCategory);
+router.post('/categories/add', addCategory);
+router.delete('/categories/delete/:id', deleteCategory);
 
 export default router;
 
