@@ -26,7 +26,7 @@ export async function specials(req,res) {
         
         let result = await pool.query(`SELECT "specialId", sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) AS "distance", "location", restaurants.name as "restaurantName", specials.name as "mealName", "photo", "price", "tags", "description", "delivery", "delivery-minimum", "phone", "restaurantId", "working-hours-from"[${req.query.day}], "working-hours-to"[${req.query.day}] `+
         `FROM specials JOIN restaurants USING("restaurantId") `+
-        `WHERE sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) < $3 AND ("delivery" = false OR (sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) < "delivery-range" AND "delivery"=true)) ${tagsQuery} ${deliveryQuery} ${searchQuery} AND "timestamp" <= $4 ORDER BY "timestamp" DESC,"specialId" LIMIT $5 OFFSET $6`,
+        `WHERE sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) < $3 AND ("delivery" = false OR (sqrt((("lat" - $1) * 111)^2 + (("lon" - $2) * 111)^2) < "delivery-range" AND "delivery"=true)) ${tagsQuery} ${deliveryQuery} ${searchQuery} AND "timestamp" <= $4 AND "deleted" = false ORDER BY "timestamp" DESC,"specialId" LIMIT $5 OFFSET $6`,
         [req.query.lat, req.query.lon, req.query.range, req.query.dateAndTime, DAILY_SPECIALS_PER_PAGE, (req.query.scrollCount - 1) * DAILY_SPECIALS_PER_PAGE]);
         if(result.rows.length && result.rows.length > 0){
             convertTagsToArray(result.rows);
@@ -58,8 +58,8 @@ export async function specials(req,res) {
 export async function specialModifiers(req,res) {
     try{
         let modifiersResponse = [];
-        modifiersResponse = await pool.query('SELECT "modifierId", "modifier" FROM modifiers JOIN meal_modifier USING("modifierId") JOIN meals USING("mealId") '+
-        'WHERE meals."mealId" = $1 AND "special" = true',[req.params.id]);
+        modifiersResponse = await pool.query('SELECT "modifierId", "modifier" FROM modifiers JOIN meal_modifier USING("modifierId") JOIN specials ON meal_modifier."mealId" = specials."specialId" '+
+        'WHERE specials."specialId" = $1 AND "special" = true',[req.params.id]);
         return res.json(modifiersResponse.rows);
     }catch(err){
         console.log(err);
