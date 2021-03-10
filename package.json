@@ -10,7 +10,7 @@
   "author": "Aleksandar Djordjevic",
   "license": "ISC",
   "devDependencies": {
-    "nodemon": "^2.0.6"
+    "node": "^2.0.6"
   },
   "dependencies": {
     "@sendgrid/mail": "^7.4.1",
