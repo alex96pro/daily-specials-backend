@@ -3,8 +3,9 @@ import * as io from 'socket.io';
 import http from 'http';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import authRouter from './routes/auth.js';
-import userRouter from './routes/user.js';
+import userAuthRouter from './routes/user-auth.js';
+import userFeedRouter from './routes/user-feed.js';
+import userMenuRouter from './routes/user-menu.js';
 import restaurantAuthRouter from './routes/restaurant-auth.js';
 import restaurantMenuRouter from './routes/restaurant-menu.js';
 import restaurantSpecialsRouter from './routes/restaurant-specials.js';
@@ -30,8 +31,9 @@ app.use(express.json( {limit:'5mb'} ));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 //ROUTES
-app.use('/auth', authRouter);
-app.use('/user', userRouter);
+app.use('/user/auth', userAuthRouter);
+app.use('/user/feed', userFeedRouter);
+app.use('/user/menu', userMenuRouter);
 app.use('/restaurant/auth', restaurantAuthRouter);
 app.use('/restaurant/menu', restaurantMenuRouter);
 app.use('/restaurant/specials', restaurantSpecialsRouter);

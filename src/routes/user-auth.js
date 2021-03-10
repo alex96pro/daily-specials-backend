@@ -1,12 +1,12 @@
 import express from 'express';
-import { login } from '../api/auth.js';
-import { signUp } from '../api/auth.js';
-import { verifyAccount } from '../api/auth.js';
-import { forgottenPassword } from '../api/auth.js';
-import { changePassword } from '../api/auth.js';
-import { newPassword } from '../api/auth.js';
-import { removeAddress } from '../api/auth.js';
-import { addNewAddress } from '../api/auth.js';
+import { login } from '../api/user-auth.js';
+import { signUp } from '../api/user-auth.js';
+import { verifyAccount } from '../api/user-auth.js';
+import { forgottenPassword } from '../api/user-auth.js';
+import { changePassword } from '../api/user-auth.js';
+import { newPassword } from '../api/user-auth.js';
+import { removeAddress } from '../api/user-auth.js';
+import { addNewAddress } from '../api/user-auth.js';
 
 const router = express.Router();
 
