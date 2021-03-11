@@ -36,7 +36,15 @@ export async function editModifier(req,res) {
             return res.status(401).json("Unauthorized");
         }
         let updateResult = await pool.query('UPDATE modifiers SET "modifier" = $1 WHERE "modifierId" = $2 RETURNING "modifierId", "modifier"', [req.body.modifier, req.body.modifierId]);
-        return res.json(updateResult.rows[0]);
+        res.json(updateResult.rows[0]);
+        // UPDATE prices of afected meals and specials if modifier is type of requiredBase
+        if(req.body.modifier.modifierType === "requiredBase"){
+            let newPrice = req.body.modifier.options[req.body.modifier.defaultOption];
+            await pool.query('UPDATE meals SET "price" = $1 WHERE "mealId" = ANY(SELECT "mealId" FROM meal_modifier JOIN modifiers USING("modifierId") '
+            +'WHERE meal_modifier."modifierId" = $2 AND "special" = false)',[newPrice, req.body.modifierId]);
+            await pool.query('UPDATE specials SET "price" = $1 WHERE "specialId" = ANY(SELECT "mealId" FROM meal_modifier JOIN modifiers USING("modifierId") '
+            +'WHERE meal_modifier."modifierId" = $2 AND "special" = true)',[newPrice, req.body.modifierId]);
+        }
     }catch(err){
         console.log(err);
         res.status(500).json(err);

@@ -40,7 +40,7 @@ app.use('/restaurant/specials', restaurantSpecialsRouter);
 app.use('/restaurant/modifiers', restaurantModifiersRouter);
 
 app.get('/', (req,res) => {
-    res.json('Direct server is online!');
+    res.json('Foozard server is online!');
 });
 
 server.listen(port, () => console.log("Server started on port " + port));
