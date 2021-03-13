@@ -43,9 +43,9 @@ export async function addNewSpecial(req,res) {
         });
         let photoURL = uploadResponse.url;
 
-        let specialsInsertResult = await pool.query('INSERT INTO "specials" VALUES (default, $1, $2, $3, $4, $5, $6, $7, $8) '+
+        let specialsInsertResult = await pool.query('INSERT INTO "specials" VALUES (default, $1, $2, $3, $4, $5, $6, $7, $8, $9) '+
         'RETURNING "specialId", "name", "photo", "price", "tags", "description", "timestamp"',
-        [req.body.restaurantId, req.body.name, photoURL, req.body.dateAndTime, req.body.price, req.body.tags, req.body.description, false]);
+        [req.body.restaurantId, req.body.name, photoURL, req.body.dateAndTime, req.body.price, req.body.tags, req.body.description, false, false]);
         specialsInsertResult.rows[0].tags = convertStringToArray(specialsInsertResult.rows[0].tags);
         specialsInsertResult.rows[0].date = getDateFromTimestamp(specialsInsertResult.rows[0].timestamp);
         specialsInsertResult.rows[0].time = getTimeFromTimestamp(specialsInsertResult.rows[0].timestamp);
@@ -118,14 +118,15 @@ export async function deleteSpecial(req,res) {
         if(decodedEmail === null){
             return res.status(401).json("Unauthorized");
         }
-        let deleteSpecialResult = await pool.query('DELETE FROM specials WHERE "specialId" = $1 RETURNING "specialId","photo"',[req.params.id]);
+        let deleteSpecialResult = await pool.query('DELETE FROM specials WHERE "specialId" = $1 RETURNING "specialId","photo","converted_from_meal"',[req.params.id]);
         res.json(deleteSpecialResult.rows[0].specialId); //return deleted specialId
         await pool.query('DELETE FROM meal_modifier WHERE "mealId" = $1 AND "special" = true',[req.params.id]);
-        //delete photo from cloudinary
-        let url = deleteSpecialResult.rows[0].photo;
-        let publicId = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
-        publicId = 'specials/'+publicId; // to delete photo from cloudinary, public id is needed = name before file extension + folders before that
-        await cloudinary.uploader.destroy(publicId);
+        if(!deleteSpecialResult.rows[0].converted_from_meal){
+            let url = deleteSpecialResult.rows[0].photo;
+            let publicId = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
+            publicId = 'specials/'+publicId; // to delete photo from cloudinary, public id is needed = name before file extension + folders before that
+            await cloudinary.uploader.destroy(publicId);
+        }
     }catch(err){
         console.log(err);
         res.status(500).json(err);
@@ -137,15 +138,17 @@ export async function deleteSpecialFromToday(req,res) {
         if(decodedEmail === null){
             return res.status(401).json("Unauthorized");
         }
-        let deletedSpecialResponse = await pool.query('UPDATE specials SET "deleted" = $1 WHERE "specialId" = $2 RETURNING "specialId", "photo", "name"',
+        let deletedSpecialResponse = await pool.query('UPDATE specials SET "deleted" = $1 WHERE "specialId" = $2 RETURNING "specialId", "photo", "name","converted_from_meal"',
         [true, req.params.id]);
         res.json(deletedSpecialResponse.rows[0].specialId);
         await pool.query('DELETE FROM meal_modifier WHERE "mealId" = $1 AND "special" = true',[req.params.id]);
-        //delete photo from cloudinary
-        let url = deletedSpecialResponse.rows[0].photo;
-        let publicId = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
-        publicId = 'specials/'+publicId;
-        await cloudinary.uploader.destroy(publicId);
+        if(!deletedSpecialResponse.rows[0].converted_from_meal){
+            //delete photo from cloudinary only if special is not made from meal
+            let url = deletedSpecialResponse.rows[0].photo;
+            let publicId = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
+            publicId = 'specials/'+publicId;
+            await cloudinary.uploader.destroy(publicId);
+        }
     }catch(err){
         console.log(err);
         res.status(500).json(err);

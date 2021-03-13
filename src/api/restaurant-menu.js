@@ -145,9 +145,9 @@ export async function convertMealToSpecial(req,res) {
         if(checkSpecialsLimitResult.rows[0]['specials'] >= 3){
             return res.status(403).json('DAILY SPECIALS LIMIT FULL');
         }
-        let specialsInsertResult = await pool.query('INSERT INTO "specials" VALUES (default, $1, $2, $3, $4, $5, $6, $7, $8) '+
+        let specialsInsertResult = await pool.query('INSERT INTO "specials" VALUES (default, $1, $2, $3, $4, $5, $6, $7, $8, $9) '+
         'RETURNING "specialId", "name", "photo", "price", "tags", "description", "timestamp"',
-        [req.body.restaurantId, req.body.name, req.body.photo, req.body.timestamp, req.body.price, req.body.tags, req.body.description, false]);
+        [req.body.restaurantId, req.body.name, req.body.photo, req.body.timestamp, req.body.price, req.body.tags, req.body.description, false, true]);
         specialsInsertResult.rows[0].tags = convertStringToArray(specialsInsertResult.rows[0].tags);
         specialsInsertResult.rows[0].date = getDateFromTimestamp(specialsInsertResult.rows[0].timestamp);
         specialsInsertResult.rows[0].time = getTimeFromTimestamp(specialsInsertResult.rows[0].timestamp);
