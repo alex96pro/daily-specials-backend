@@ -31,7 +31,7 @@ export async function login(req,res) {
         console.log(err);
         res.status(500).json(err);
     }
-}
+};
 
 export async function signUp(req,res) {
     try{
@@ -61,7 +61,7 @@ export async function signUp(req,res) {
         console.log(err);
         res.status(500).json(err);
     }
-}
+};
 
 export async function verifyAccount(req,res) {
     try{
@@ -69,13 +69,15 @@ export async function verifyAccount(req,res) {
         [req.body.hashedUserId, 'account-verification', 'user']);
         if(result.rowCount === 1){
             res.status(200).json("VERIFIED");
+        }else{
+            res.status(400).json("LINK INVALID OR EXPIRED");
         }
         await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3', [req.body.hashedUserId, 'account-verification', 'user']);
     }catch(err){
         console.log(err);
         res.status(500).json(err);
     }
-}
+};
 
 export async function forgottenPassword(req,res) {
     try{
@@ -95,7 +97,6 @@ export async function forgottenPassword(req,res) {
             }else{
                 res.status(500).json("Error while sending email");
             }
-            
         }else{
             res.status(401).json("Email doesn't exist");
         }
@@ -103,7 +104,7 @@ export async function forgottenPassword(req,res) {
         console.log(err);
         res.status(500).json(err);
     }
-}
+};
 
 export async function newPassword(req,res) {
     try{
@@ -113,14 +114,14 @@ export async function newPassword(req,res) {
         if(result.rowCount === 1){
             await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3', [req.body.userId, 'forgotten-password', 'user']);
         }else{
-            return res.status(401).json("Unauthorized");
+            return res.status(400).json("LINK INVALID OR EXPIRED");
         }
         res.status(200).json("Successfully created new password");
     }catch(err){
         console.log(err);
         res.status(500).json(err);
     }
-}
+};
 
 export async function changePassword(req,res) {
     try{
@@ -151,7 +152,7 @@ export async function addNewAddress(req,res) {
         console.log(err);
         res.status(500).json(err);
     }
-}
+};
 
 export async function removeAddress(req,res) {
     try{
@@ -166,4 +167,4 @@ export async function removeAddress(req,res) {
         console.log(err);
         res.status(500).json(err);
     }
-}
+};

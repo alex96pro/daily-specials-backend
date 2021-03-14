@@ -108,7 +108,7 @@ export async function verifyAccount(req,res) {
         if(result.rowCount === 1){
             res.status(200).json("Successfully verified");
         }else{
-            return res.status(401).json("Unauthorized");
+            return res.status(400).json("LINK INVALID OR EXPIRED");
         }
         await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3', [req.body.hashedRestaurantId, 'account-verification', 'restaurant']);
     }catch(err){
@@ -151,7 +151,7 @@ export async function newPassword(req,res) {
         if(result.rowCount === 1){
             await pool.query('DELETE FROM verification WHERE "hashedId" = $1 AND "type" = $2 AND "role" = $3', [req.body.hashedId, 'forgotten-password', 'restaurant']);
         }else{
-            return res.status(401).json("Unauthorized");
+            return res.status(400).json("LINK INVALID OR EXPIRED");
         }
         res.status(200).json("Successfully created new password");
     }catch(err){
